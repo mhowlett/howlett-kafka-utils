@@ -9,7 +9,83 @@ namespace Howlett.Kafka.Utils
     /// <summary>
     ///     K,V table materialized from a stream.
     /// </summary>
-    public class KTable<K, V, MK, MV> : IEnumerable<KeyValuePair<K, V>>
+    public class KTable<K, V> : IEnumerable<KeyValuePair<K, V>>
+    {
+        private KTable<K, V, K, V> d;
+
+        /// <summary>
+        ///     constructor
+        /// </summary>
+        /// <param name="bootstrapServers">
+        ///     bs
+        /// </param>
+        /// <param name="topic">
+        ///     t
+        /// </param>
+        /// <param name="minPartition">
+        ///     mp
+        /// </param>
+        /// <param name="maxPartition">
+        ///     mp
+        /// </param>
+        /// <param name="keyDeserializer">
+        ///     k
+        /// </param>
+        /// <param name="valueDeserializer">
+        ///     v
+        /// </param>
+        /// <param name="logProgressEvery">
+        ///     p
+        /// </param>
+        public KTable(
+            string bootstrapServers, 
+            string topic,
+            int minPartition, int maxPartition, 
+            IDeserializer<K> keyDeserializer, 
+            IDeserializer<V> valueDeserializer,
+            int logProgressEvery = 100000)
+        {
+            d = new KTable<K, V, K, V>(
+                bootstrapServers,
+                topic,
+                minPartition, maxPartition,
+                keyDeserializer,
+                valueDeserializer,
+                (k, v) => k, (k, v) => v,
+                logProgressEvery
+            );
+        }
+
+        /// <summary>
+        ///     val at k
+        /// </summary>
+        public V this[K key]
+        {
+            get
+            {
+                return d[key];
+            }
+        }
+
+        /// <summary>
+        ///     e
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerator<KeyValuePair<K, V>> GetEnumerator()
+        {
+            return ((IEnumerable<KeyValuePair<K, V>>)d).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return ((IEnumerable<KeyValuePair<K, V>>)d).GetEnumerator();
+        }
+    }
+
+    /// <summary>
+    ///     K,V table materialized from a stream.
+    /// </summary>
+    public class KTable<MK, MV, K, V> : IEnumerable<KeyValuePair<K, V>>
     {
         private Dictionary<K, V> d;
 
@@ -37,6 +113,9 @@ namespace Howlett.Kafka.Utils
         /// <param name="kConstruct">
         ///     to make dict key
         /// </param>
+        /// <param name="logProgressEvery">
+        ///     -ve - don't log.
+        /// </param>
         /// <param name="vConstruct">
         ///     to make dict value
         /// </param>
@@ -47,7 +126,8 @@ namespace Howlett.Kafka.Utils
             IDeserializer<MK> keyDeserializer, 
             IDeserializer<MV> valueDeserializer,
             Func<MK, MV, K> kConstruct,
-            Func<MK, MV, V> vConstruct)
+            Func<MK, MV, V> vConstruct,
+            int logProgressEvery = 100000)
         {
             var config = new Dictionary<string, object>
             {
@@ -62,10 +142,25 @@ namespace Howlett.Kafka.Utils
             using (var consumer = new Consumer<MK, MV>(config, keyDeserializer, valueDeserializer))
             {
                 int finishedCount = 0;
-            
+                int cnt = 0;
+
                 consumer.OnMessage += (_, msg) => 
                 {
+                    if (logProgressEvery > 0)
+                    {
+                        if (++cnt % logProgressEvery == 0)
+                        {
+                            Console.WriteLine("... " + cnt);
+                        }
+                    }
+
                     var k = kConstruct(msg.Key, msg.Value);
+
+                    if (k == null)
+                    {
+                        return;
+                    }
+
                     var v = vConstruct(msg.Key, msg.Value);
 
                     if (d.ContainsKey(k))
@@ -83,6 +178,14 @@ namespace Howlett.Kafka.Utils
                     finishedCount += 1;
                 };
 
+                var ps = new List<TopicPartitionOffset>();
+                for (var i=minPartition; i<=maxPartition; ++i)
+                {
+                    ps.Add(new TopicPartitionOffset(topic, i, 0));
+                }
+                
+                consumer.Assign(ps);
+                
                 while (finishedCount != (maxPartition - minPartition + 1))
                 {
                     consumer.Poll(100);
