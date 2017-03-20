@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <VersionPrefix>0.0.3</VersionPrefix>
+    <Authors>Matt Howlett</Authors>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <AssemblyTitle>Howlett.Kafka.Utils</AssemblyTitle>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TargetFramework>netstandard1.4</TargetFramework>
+    <AssemblyName>Howlett.Kafka.Utils</AssemblyName>
+    <PackageId>Howlett.Kafka.Utils</PackageId>
+    <PackageTags>kafka;streamprocessing</PackageTags>
+    <Description>The very beginnings of a stream processing layer on top of Confluent.Kafka</Description>
+    <Copyright>Matt Howlett 2017</Copyright>
+    <PackageProjectUrl>https://github.com/mhowlett/howlett-kafka-utils</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/mhowlett/howlett-kafka-utils</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+      <PackageReference Include="Confluent.Kafka" Version="0.9.4" />
+  </ItemGroup>
+
+</Project>
