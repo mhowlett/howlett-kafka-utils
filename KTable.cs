@@ -37,12 +37,16 @@ namespace Howlett.Kafka.Utils
         /// <param name="logProgressEvery">
         ///     p
         /// </param>
+        /// <param name="limit">
+        ///     p
+        /// </param>
         public KTable(
             string bootstrapServers, 
             string topic,
             int minPartition, int maxPartition, 
             IDeserializer<K> keyDeserializer, 
             IDeserializer<V> valueDeserializer,
+            int limit = -1,
             int logProgressEvery = 100000)
         {
             d = new KTable<K, V, K, V>(
@@ -52,6 +56,7 @@ namespace Howlett.Kafka.Utils
                 keyDeserializer,
                 valueDeserializer,
                 (k, v) => k, (k, v) => v,
+                limit,
                 logProgressEvery
             );
         }
@@ -79,6 +84,16 @@ namespace Howlett.Kafka.Utils
         IEnumerator IEnumerable.GetEnumerator()
         {
             return ((IEnumerable<KeyValuePair<K, V>>)d).GetEnumerator();
+        }
+
+        /// <summary>
+        ///     contains key
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public bool ContainsKey(K key)
+        {
+            return d.ContainsKey(key);
         }
     }
 
@@ -119,6 +134,9 @@ namespace Howlett.Kafka.Utils
         /// <param name="vConstruct">
         ///     to make dict value
         /// </param>
+        /// <param name="limit">
+        ///     max number to read.
+        /// </param>
         public KTable(
             string bootstrapServers, 
             string topic,
@@ -127,6 +145,7 @@ namespace Howlett.Kafka.Utils
             IDeserializer<MV> valueDeserializer,
             Func<MK, MV, K> kConstruct,
             Func<MK, MV, V> vConstruct,
+            int limit = -1,
             int logProgressEvery = 100000)
         {
             var config = new Dictionary<string, object>
@@ -189,6 +208,11 @@ namespace Howlett.Kafka.Utils
                 while (finishedCount != (maxPartition - minPartition + 1))
                 {
                     consumer.Poll(100);
+
+                    if (limit != -1 && cnt >= limit)
+                    {
+                        break;
+                    }
                 }
             }
         }
@@ -224,6 +248,16 @@ namespace Howlett.Kafka.Utils
         IEnumerator IEnumerable.GetEnumerator()
         {
             return ((IEnumerable<KeyValuePair<K, V>>)d).GetEnumerator();
+        }
+
+        /// <summary>
+        ///     contains key
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public bool ContainsKey(K key)
+        {
+            return d.ContainsKey(key);
         }
     }
 }
